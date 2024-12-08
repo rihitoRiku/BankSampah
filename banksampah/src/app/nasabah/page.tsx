@@ -12,8 +12,29 @@ const ReactApexChart = dynamic(() => import("react-apexcharts"), {
 });
 
 const WasteBarChart: React.FC = () => {
-  const barChartData = useStore((state) => state.barChartData);
-  const barChartCategories = useStore((state) => state.barChartCategories);
+  const setoran = useStore((state) => state.setoran);
+
+  // Extract waste types and their total weights
+  const barChartCategories = [
+    ...new Set(setoran.map((item) => item.namaSampah)),
+  ];
+  const barChartData = barChartCategories.map((type) =>
+    setoran
+      .filter((item) => item.namaSampah === type)
+      .reduce((sum, current) => sum + current.berat, 0)
+  );
+
+  // Sort by weight and limit to top 5
+  const sortedData = barChartCategories
+    .map((category, index) => ({
+      category,
+      weight: barChartData[index],
+    }))
+    .sort((a, b) => b.weight - a.weight)
+    .slice(0, 5);
+
+  const topCategories = sortedData.map((item) => item.category);
+  const topWeights = sortedData.map((item) => item.weight);
 
   const barChartOptions: ApexOptions = {
     chart: {
@@ -31,14 +52,14 @@ const WasteBarChart: React.FC = () => {
       enabled: false,
     },
     xaxis: {
-      categories: barChartCategories,
+      categories: topCategories,
     },
   };
 
   const barChartSeries = [
     {
       name: "Berat (kg)",
-      data: barChartData,
+      data: topWeights,
     },
   ];
 
@@ -55,8 +76,37 @@ const WasteBarChart: React.FC = () => {
 };
 
 const WasteTrendChart: React.FC = () => {
-  const trendChartData = useStore((state) => state.trendChartData);
-  const trendChartCategories = useStore((state) => state.trendChartCategories);
+  const setoran = useStore((state) => state.setoran);
+
+  // Extract unique dates and calculate total weight for each date
+  const trendChartCategories = [
+    ...new Set(setoran.map((item) => item.tanggalSetor)),
+  ].sort();
+  const trendChartData = trendChartCategories.map((date) =>
+    setoran
+      .filter((item) => item.tanggalSetor === date)
+      .reduce((sum, current) => sum + current.berat, 0)
+  );
+
+  // Sort by weight and limit to top 5
+  const sortedTrendData = trendChartCategories
+    .map((date, index) => ({
+      date,
+      weight: trendChartData[index],
+    }))
+    .slice(0, 5);
+
+  const topDates = sortedTrendData.map((item) => {
+    const date = new Date(item.date);
+    return `${date.getDate().toString().padStart(2, "0")}/${(
+      date.getMonth() + 1
+    )
+      .toString()
+      .padStart(2, "0")}/${date.getFullYear().toString().slice(-2)}`;
+  });
+  const topWeights = sortedTrendData.map((item) =>
+    parseFloat(item.weight.toFixed(2))
+  );
 
   const lineChartOptions: ApexOptions = {
     chart: {
@@ -72,7 +122,7 @@ const WasteTrendChart: React.FC = () => {
       curve: "smooth",
     },
     xaxis: {
-      categories: trendChartCategories,
+      categories: topDates,
     },
     yaxis: {
       title: {
@@ -84,7 +134,7 @@ const WasteTrendChart: React.FC = () => {
   const lineChartSeries = [
     {
       name: "Jumlah Berat (kg)",
-      data: trendChartData,
+      data: topWeights,
     },
   ];
 
@@ -101,7 +151,7 @@ const WasteTrendChart: React.FC = () => {
 };
 
 export default function page() {
-  const name = useStore((state) => state.name);
+  const name = useStore((state) => state.nama);
   const role = useStore((state) => state.role);
   return (
     <>
